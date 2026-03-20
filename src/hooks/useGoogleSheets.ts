@@ -16,8 +16,8 @@ export function useGoogleSheets({ autoRefresh = true, refreshInterval = 30000 }:
   const fetchData = useCallback(async (force = false) => {
     try {
       setError(null);
-      const apiKey = import.meta.env.VITE_GOOGLE_API_KEY || '';
-      if (apiKey) sheetsService.setApiKey(apiKey);
+      const apiKey = import.meta.env.VITE_GOOGLE_API_KEY || 'AIzaSyBD6S8zTScYhJfoxuE1KxpgftkyYcf_oeY';
+      sheetsService.setApiKey(apiKey);
       const data = await sheetsService.fetchData(force);
       setTransactions(data);
       setLastUpdated(new Date());
