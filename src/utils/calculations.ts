@@ -1,5 +1,7 @@
 import { Transaction, DailySummary, BarberStats, CategoryExpense, DayOfWeekStats, FilterOptions } from '../types';
 
+const BARBEROS_LH = ['Jeisson', 'Camilo', 'Luis', 'Alejandro'];
+
 export function applyFilters(transactions: Transaction[], filters: FilterOptions): Transaction[] {
   return transactions.filter(t => {
     if (filters.fechaInicio && t.fecha < filters.fechaInicio) return false;
@@ -25,6 +27,10 @@ export function calcDailySummaries(transactions: Transaction[]): DailySummary[] 
 
 export function calcBarberStats(transactions: Transaction[]): BarberStats[] {
   const map = new Map<string, BarberStats>();
+  // Always initialize all known barberos so they appear even with 0 transactions
+  for (const name of BARBEROS_LH) {
+    map.set(name, { barbero: name, total: 0, servicios: 0, promedio: 0 });
+  }
   for (const t of transactions.filter(t => t.tipo === 'Ingreso' && t.barbero)) {
     if (!map.has(t.barbero)) map.set(t.barbero, { barbero: t.barbero, total: 0, servicios: 0, promedio: 0 });
     const b = map.get(t.barbero)!;
@@ -87,7 +93,10 @@ export function formatCOP(amount: number): string {
 }
 
 export function getUniqueBarberos(transactions: Transaction[]): string[] {
-  const set = new Set(transactions.filter(t => t.tipo === 'Ingreso' && t.barbero).map(t => t.barbero));
+  const set = new Set([
+    ...BARBEROS_LH,
+    ...transactions.filter(t => t.tipo === 'Ingreso' && t.barbero).map(t => t.barbero),
+  ]);
   return Array.from(set).sort();
 }
 

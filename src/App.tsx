@@ -67,7 +67,8 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  const isDemoMode = !import.meta.env.VITE_GOOGLE_API_KEY;
+  const FALLBACK_KEY = 'AIzaSyBD6S8zTScYhJfoxuE1KxpgftkyYcf_oeY';
+  const isDemoMode = !import.meta.env.VITE_GOOGLE_API_KEY && !FALLBACK_KEY;
 
   return (
     <div className="min-h-screen bg-lh-bg text-white">
