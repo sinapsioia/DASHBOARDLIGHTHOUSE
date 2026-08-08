@@ -678,17 +678,17 @@ insert into public.barbers (name, aliases, sort_order) values
 on conflict (name) do update set active = true, aliases = excluded.aliases, sort_order = excluded.sort_order;
 
 insert into public.services (code, name, category, price, duration_minutes, sort_order) values
-  ('corte_alejandria', 'Corte Faro de Alejandría', 'Corte', 45000, 45, 10),
-  ('barba_ribadeo', 'Barba Faro Ribadeo', 'Barba', 30000, 30, 20),
-  ('barba_singapur', 'Barba Faro Singapur', 'Barba', 35000, 40, 30),
-  ('mascarilla_malasia', 'Mascarilla Hidratante Faro Malasia', 'Mascarilla', 40000, 30, 40),
-  ('cejas', 'Cejas', 'Cejas', 10000, 15, 50),
-  ('corte_alejandria_cejas', 'Corte Faro de Alejandría + Cejas', 'Corte', 55000, 60, 60),
-  ('combo_portobello', 'Combo Faro Portobello', 'Combo', 65000, 90, 70),
-  ('combo_trinidad', 'Combo Faro Trinidad', 'Combo', 55000, 75, 80),
-  ('combo_point_sur', 'Combo Faro Point Sur', 'Combo', 90000, 120, 90),
-  ('combo_new_island', 'Combo Faro New Island', 'Combo', 110000, 120, 100),
-  ('combo_ponta_verde', 'Combo Faro Ponta Verde', 'Combo', 120000, 150, 110)
+  ('corte_alejandria', 'Corte Faro de Alejandría', 'Corte', 50000, 45, 10),
+  ('barba_ribadeo', 'Barba Faro Ribadeo', 'Barba', 35000, 30, 20),
+  ('barba_singapur', 'Barba Faro Singapur', 'Barba', 40000, 40, 30),
+  ('mascarilla_malasia', 'Mascarilla Hidratante Faro Malasia', 'Mascarilla', 45000, 30, 40),
+  ('cejas', 'Cejas', 'Cejas', 15000, 15, 50),
+  ('corte_alejandria_cejas', 'Corte Faro de Alejandría + Cejas', 'Corte', 60000, 60, 60),
+  ('combo_portobello', 'Combo Faro Portobello', 'Combo', 70000, 90, 70),
+  ('combo_trinidad', 'Combo Faro Trinidad', 'Combo', 60000, 75, 80),
+  ('combo_point_sur', 'Combo Faro Point Sur', 'Combo', 95000, 120, 90),
+  ('combo_new_island', 'Combo Faro New Island', 'Combo', 115000, 120, 100),
+  ('combo_ponta_verde', 'Combo Faro Ponta Verde', 'Combo', 125000, 150, 110)
 on conflict (code) do update set
   name = excluded.name,
   category = excluded.category,
