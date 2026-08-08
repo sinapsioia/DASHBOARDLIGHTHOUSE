@@ -6,6 +6,15 @@ export interface Transaction {
   categoria: string;
   descripcion: string;
   servicio: string;
+  clienteNombre?: string;
+  cedula?: string;
+  email?: string;
+  telefono?: string;
+  fechaNacimiento?: string;
+  direccion?: string;
+  fechaCita?: string;
+  horaCita?: string;
+  estado?: string;
 }
 
 export interface DailySummary {

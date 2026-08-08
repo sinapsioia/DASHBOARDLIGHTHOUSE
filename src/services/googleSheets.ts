@@ -4,6 +4,7 @@ import { Transaction } from '../types';
 const SPREADSHEET_ID = '1rnnmx1ndo8HEUT4K6S8JpXWq5EtIAHk_RAmGOYsE01o';
 const SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets';
 const CACHE_DURATION = 30000; // 30 seconds
+const BOGOTA_TIME_ZONE = 'America/Bogota';
 
 // Derive category from Lighthouse service name
 function categoriaFromServicio(servicio: string): string {
@@ -15,16 +16,35 @@ function categoriaFromServicio(servicio: string): string {
   return 'Otro';
 }
 
+function isIncomeStatus(raw: string): boolean {
+  const status = String(raw || '').trim().toLowerCase();
+  return ['confirmada', 'confirmado', 'walk-in', 'walkin', 'walk in'].includes(status);
+}
+
+function formatDateInBogota(date: Date): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: BOGOTA_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value || '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
 function parseDate(raw: string): string {
-  if (!raw) return '';
-  // ISO format: 2026-02-08T20:00:00.000Z → 2026-02-08
-  if (raw.includes('T')) return raw.split('T')[0];
+  const value = String(raw || '').trim();
+  if (!value) return '';
+  if (value.includes('T')) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '' : formatDateInBogota(date);
+  }
   // DD/MM/YYYY
-  if (raw.includes('/')) {
-    const [d, m, y] = raw.split('/');
+  if (value.includes('/')) {
+    const [d, m, y] = value.split('/');
     return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
   }
-  return raw;
+  return value;
 }
 
 class GoogleSheetsService {
@@ -63,36 +83,55 @@ class GoogleSheetsService {
       if (citasRows.length > 1) {
         const headers = citasRows[0].map(h => h.trim().toLowerCase());
         const idx = (name: string) => headers.indexOf(name.toLowerCase());
+        const idxAny = (...names: string[]) => names.map((name) => idx(name)).find((index) => index !== -1) ?? -1;
+        const cell = (row: string[], index: number) => index >= 0 ? (row[index] || '') : '';
 
         const iEstado   = idx('estado');
         const iBarbero  = idx('barbero');
         const iServicio = idx('servicio');
         const iPrecio   = idx('precio');
+        const iFechaCita = idx('fecha_cita');
         const iFechaISO = idx('fecha_inicio_iso');
         const iTimestamp = idx('timestamp');
         const iNombre   = idx('nombre_completo');
+        const iCedula = idxAny('cedula', 'cédula');
+        const iEmail = idxAny('email', 'correo', 'correo_electronico', 'correo electrónico');
+        const iTelefono = idxAny('telefono', 'teléfono', 'celular');
+        const iFechaNacimiento = idxAny('fecha_nacimiento', 'fecha de nacimiento', 'fecha_nac');
+        const iDireccion = idxAny('direccion', 'dirección');
+        const iHora = idx('hora');
 
         for (let i = 1; i < citasRows.length; i++) {
           const row = citasRows[i];
-          const estado = (row[iEstado] || '').toLowerCase().trim();
-          if (estado !== 'confirmada') continue;
+          const estado = cell(row, iEstado);
+          if (!isIncomeStatus(estado)) continue;
 
-          const monto = parseFloat((row[iPrecio] || '0').replace(/[^0-9.]/g, ''));
+          const monto = parseFloat((cell(row, iPrecio) || '0').replace(/[^0-9.]/g, ''));
           if (!monto) continue;
 
-          const fechaRaw = row[iFechaISO] || row[iTimestamp] || '';
+          const fechaRaw = cell(row, iFechaCita) || cell(row, iFechaISO) || cell(row, iTimestamp);
           const fecha = parseDate(fechaRaw);
           if (!fecha) continue;
 
-          const servicio = row[iServicio] || '';
+          const servicio = cell(row, iServicio);
+          const nombre = cell(row, iNombre);
           transactions.push({
             fecha,
             tipo: 'Ingreso',
-            barbero: row[iBarbero] || '',
+            barbero: cell(row, iBarbero),
             monto,
             categoria: categoriaFromServicio(servicio),
-            descripcion: row[iNombre] || '',
+            descripcion: nombre,
             servicio,
+            clienteNombre: nombre,
+            cedula: cell(row, iCedula),
+            email: cell(row, iEmail),
+            telefono: cell(row, iTelefono),
+            fechaNacimiento: parseDate(cell(row, iFechaNacimiento)),
+            direccion: cell(row, iDireccion),
+            fechaCita: parseDate(cell(row, iFechaCita)) || fecha,
+            horaCita: cell(row, iHora),
+            estado,
           });
         }
       }
@@ -101,6 +140,7 @@ class GoogleSheetsService {
       if (gastosRows.length > 1) {
         const headers = gastosRows[0].map(h => h.trim().toLowerCase());
         const idx = (name: string) => headers.indexOf(name.toLowerCase());
+        const cell = (row: string[], index: number) => index >= 0 ? (row[index] || '') : '';
 
         const iFecha    = idx('fecha');
         const iMonto    = idx('monto');
@@ -109,11 +149,11 @@ class GoogleSheetsService {
 
         for (let i = 1; i < gastosRows.length; i++) {
           const row = gastosRows[i];
-          const fechaRaw = row[iFecha] || '';
+          const fechaRaw = cell(row, iFecha);
           const fecha = parseDate(fechaRaw);
           if (!fecha) continue;
 
-          const monto = parseFloat((row[iMonto] || '0').replace(/[^0-9.]/g, ''));
+          const monto = parseFloat((cell(row, iMonto) || '0').replace(/[^0-9.]/g, ''));
           if (!monto) continue;
 
           transactions.push({
@@ -121,9 +161,10 @@ class GoogleSheetsService {
             tipo: 'Gasto',
             barbero: '',
             monto,
-            categoria: row[iCategoria] || 'Otros',
-            descripcion: row[iDesc] || '',
+            categoria: cell(row, iCategoria) || 'Otros',
+            descripcion: cell(row, iDesc),
             servicio: '',
+            estado: '',
           });
         }
       }
@@ -148,12 +189,12 @@ class GoogleSheetsService {
   }
 
   getMockData(): Transaction[] {
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const today = formatDateInBogota(new Date());
+    const yesterday = formatDateInBogota(new Date(Date.now() - 86400000));
     return [
       { fecha: today, tipo: 'Ingreso', barbero: 'Jeisson', monto: 65000, categoria: 'Combo', descripcion: 'Cliente demo', servicio: 'Combo Faro Portobello (Ritual)' },
       { fecha: today, tipo: 'Ingreso', barbero: 'Camilo', monto: 45000, categoria: 'Corte', descripcion: 'Cliente demo', servicio: 'Corte Faro de Alejandría' },
-      { fecha: today, tipo: 'Ingreso', barbero: 'Alejandro', monto: 55000, categoria: 'Combo', descripcion: 'Cliente demo', servicio: 'Combo Faro Trinidad (Sencillo)' },
+      { fecha: today, tipo: 'Ingreso', barbero: 'Daniel', monto: 55000, categoria: 'Combo', descripcion: 'Cliente demo', servicio: 'Combo Faro Trinidad', clienteNombre: 'Cliente demo', telefono: '3000000002', fechaCita: today, horaCita: '12:00', estado: 'walk-in' },
       { fecha: today, tipo: 'Gasto', barbero: '', monto: 45000, categoria: 'Insumos', descripcion: 'Cuchillas y productos demo', servicio: '' },
       { fecha: yesterday, tipo: 'Ingreso', barbero: 'Luis', monto: 90000, categoria: 'Combo', descripcion: 'Cliente demo', servicio: 'Combo Faro Point Sur' },
       { fecha: yesterday, tipo: 'Ingreso', barbero: 'Jeisson', monto: 65000, categoria: 'Combo', descripcion: 'Cliente demo', servicio: 'Combo Faro Portobello (Ritual)' },

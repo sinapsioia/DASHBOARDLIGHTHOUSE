@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { sheetsService } from '../services/googleSheets';
 import { Transaction } from '../types';
+import { appConfig } from '../lib/config';
 
 interface UseGoogleSheetsOptions {
   autoRefresh?: boolean;
@@ -16,8 +17,7 @@ export function useGoogleSheets({ autoRefresh = true, refreshInterval = 30000 }:
   const fetchData = useCallback(async (force = false) => {
     try {
       setError(null);
-      const apiKey = import.meta.env.VITE_GOOGLE_API_KEY || '';
-      sheetsService.setApiKey(apiKey);
+      sheetsService.setApiKey(appConfig.googleApiKey);
       const data = await sheetsService.fetchData(force);
       setTransactions(data);
       setLastUpdated(new Date());

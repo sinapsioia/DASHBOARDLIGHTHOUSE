@@ -1,6 +1,12 @@
 import { Transaction, DailySummary, BarberStats, CategoryExpense, DayOfWeekStats, FilterOptions } from '../types';
 
-const BARBEROS_LH = ['Jeisson', 'Camilo', 'Luis', 'Alejandro'];
+function todayBogota(): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const get = (type: string) => parts.find((part) => part.type === type)?.value || '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
 
 export function applyFilters(transactions: Transaction[], filters: FilterOptions): Transaction[] {
   return transactions.filter(t => {
@@ -25,10 +31,9 @@ export function calcDailySummaries(transactions: Transaction[]): DailySummary[] 
   return Array.from(map.values()).sort((a, b) => b.fecha.localeCompare(a.fecha));
 }
 
-export function calcBarberStats(transactions: Transaction[]): BarberStats[] {
+export function calcBarberStats(transactions: Transaction[], catalogBarbers: string[] = []): BarberStats[] {
   const map = new Map<string, BarberStats>();
-  // Always initialize all known barberos so they appear even with 0 transactions
-  for (const name of BARBEROS_LH) {
+  for (const name of catalogBarbers) {
     map.set(name, { barbero: name, total: 0, servicios: 0, promedio: 0 });
   }
   for (const t of transactions.filter(t => t.tipo === 'Ingreso' && t.barbero)) {
@@ -81,7 +86,7 @@ export function calcTopServices(transactions: Transaction[]): { servicio: string
 }
 
 export function getTodaySummary(transactions: Transaction[]): { ingresos: number; gastos: number; neto: number; servicios: number } {
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayBogota();
   const todays = transactions.filter(t => t.fecha === today);
   const ingresos = todays.filter(t => t.tipo === 'Ingreso').reduce((s, t) => s + t.monto, 0);
   const gastos = todays.filter(t => t.tipo === 'Gasto').reduce((s, t) => s + t.monto, 0);
@@ -92,9 +97,9 @@ export function formatCOP(amount: number): string {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(amount);
 }
 
-export function getUniqueBarberos(transactions: Transaction[]): string[] {
+export function getUniqueBarberos(transactions: Transaction[], catalogBarbers: string[] = []): string[] {
   const set = new Set([
-    ...BARBEROS_LH,
+    ...catalogBarbers,
     ...transactions.filter(t => t.tipo === 'Ingreso' && t.barbero).map(t => t.barbero),
   ]);
   return Array.from(set).sort();

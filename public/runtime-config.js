@@ -1,0 +1,6 @@
+window.__LIGHTHOUSE_CONFIG__ = {
+  SUPABASE_URL: '',
+  SUPABASE_KEY: '',
+  GOOGLE_API_KEY: '',
+  CONFIG_ERROR: '',
+};
