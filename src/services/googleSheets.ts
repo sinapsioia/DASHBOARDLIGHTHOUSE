@@ -32,19 +32,64 @@ function formatDateInBogota(date: Date): string {
   return `${get('year')}-${get('month')}-${get('day')}`;
 }
 
-function parseDate(raw: string): string {
+const MONTHS_ES: Record<string, number> = {
+  enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6,
+  julio: 7, agosto: 8, septiembre: 9, setiembre: 9, octubre: 10, noviembre: 11, diciembre: 12,
+};
+
+function stripAccents(value: string): string {
+  return value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+/** Verifica que la cadena sea un YYYY-MM-DD real y no algo como 2026-02-31. */
+function isValidIsoDay(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [y, m, d] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+}
+
+/**
+ * La hoja mezcla tres formatos en la misma columna: ISO, DD/MM/YYYY y texto en
+ * español ("Sábado 8 de febrero de 2026", a veces sin año). Antes el texto en
+ * español se devolvía tal cual, y como no es una fecha válida rompía cualquier
+ * cálculo que hiciera `new Date(fecha)`. Ahora se normaliza todo a YYYY-MM-DD y
+ * lo que no se pueda interpretar devuelve cadena vacía, para que la fila se
+ * descarte en vez de contaminar los totales.
+ */
+function parseDate(raw: string, fallbackYear?: number): string {
   const value = String(raw || '').trim();
   if (!value) return '';
+
   if (value.includes('T')) {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? '' : formatDateInBogota(date);
   }
+
   // DD/MM/YYYY
   if (value.includes('/')) {
     const [d, m, y] = value.split('/');
-    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    if (!d || !m || !y) return '';
+    const iso = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    return isValidIsoDay(iso) ? iso : '';
   }
-  return value;
+
+  // Ya viene como YYYY-MM-DD
+  if (isValidIsoDay(value)) return value;
+
+  // Texto en español: "Sábado 8 de febrero de 2026" o "Sábado 21 de Febrero"
+  const match = stripAccents(value).match(/(\d{1,2})\s+de\s+([a-z]+)(?:\s+de\s+(\d{4}))?/);
+  if (match) {
+    const day = Number(match[1]);
+    const month = MONTHS_ES[match[2]];
+    const year = match[3] ? Number(match[3]) : fallbackYear;
+    if (month && year) {
+      const iso = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      if (isValidIsoDay(iso)) return iso;
+    }
+  }
+
+  return '';
 }
 
 class GoogleSheetsService {
@@ -109,8 +154,12 @@ class GoogleSheetsService {
           const monto = parseFloat((cell(row, iPrecio) || '0').replace(/[^0-9.]/g, ''));
           if (!monto) continue;
 
-          const fechaRaw = cell(row, iFechaCita) || cell(row, iFechaISO) || cell(row, iTimestamp);
-          const fecha = parseDate(fechaRaw);
+          // Fecha_Inicio_ISO es la que escribe el bot y siempre viene en ISO;
+          // Fecha_Cita mezcla formatos y solo sirve como respaldo.
+          const anioTimestamp = Number(parseDate(cell(row, iTimestamp)).slice(0, 4)) || undefined;
+          const fecha = parseDate(cell(row, iFechaISO))
+            || parseDate(cell(row, iFechaCita), anioTimestamp)
+            || parseDate(cell(row, iTimestamp));
           if (!fecha) continue;
 
           const servicio = cell(row, iServicio);
@@ -129,7 +178,7 @@ class GoogleSheetsService {
             telefono: cell(row, iTelefono),
             fechaNacimiento: parseDate(cell(row, iFechaNacimiento)),
             direccion: cell(row, iDireccion),
-            fechaCita: parseDate(cell(row, iFechaCita)) || fecha,
+            fechaCita: parseDate(cell(row, iFechaCita), anioTimestamp) || fecha,
             horaCita: cell(row, iHora),
             estado,
           });

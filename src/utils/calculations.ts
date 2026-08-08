@@ -62,8 +62,11 @@ export function calcDayOfWeekStats(transactions: Transaction[]): DayOfWeekStats[
   for (let i = 0; i < 7; i++) map.set(i, { ingresos: 0, servicios: 0 });
 
   for (const t of transactions.filter(t => t.tipo === 'Ingreso')) {
+    // Una fecha no interpretable daba getDay() = NaN, y map.get(NaN) es
+    // undefined: bastaba una fila asi para tumbar el render de toda la pagina.
     const dow = new Date(t.fecha + 'T12:00:00').getDay();
-    const d = map.get(dow)!;
+    const d = Number.isNaN(dow) ? undefined : map.get(dow);
+    if (!d) continue;
     d.ingresos += t.monto;
     d.servicios += 1;
   }

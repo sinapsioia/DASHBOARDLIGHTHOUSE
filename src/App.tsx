@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppShell } from './components/layout/AppShell';
 import { appConfig } from './lib/config';
 import { ConfigurationPage, LoadingPage, UnauthorizedPage } from './pages/AccessStatePage';
@@ -20,10 +21,11 @@ function ProtectedApplication() {
     <Suspense fallback={<LoadingPage />}>
       <Routes>
         <Route element={<AppShell />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="clientes" element={<ClientsPage />} />
-          <Route path="cortes" element={<CutsPage />} />
-          <Route path="configuracion" element={<SettingsPage />} />
+          {/* Cada seccion se aisla: si una falla, el resto del panel sigue usable. */}
+          <Route index element={<ErrorBoundary section="el resumen"><DashboardPage /></ErrorBoundary>} />
+          <Route path="clientes" element={<ErrorBoundary section="los clientes"><ClientsPage /></ErrorBoundary>} />
+          <Route path="cortes" element={<ErrorBoundary section="los cortes"><CutsPage /></ErrorBoundary>} />
+          <Route path="configuracion" element={<ErrorBoundary section="la configuración"><SettingsPage /></ErrorBoundary>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

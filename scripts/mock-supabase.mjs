@@ -32,7 +32,7 @@ const session = { access_token: accessToken, token_type: 'bearer', expires_in: 3
 function send(response, status, body, request) {
   response.writeHead(status, {
     'Access-Control-Allow-Origin': request.headers.origin || '*',
-    'Access-Control-Allow-Headers': 'authorization, apikey, content-type, prefer, x-client-info',
+    'Access-Control-Allow-Headers': request.headers['access-control-request-headers'] || '*',
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
     'Access-Control-Expose-Headers': 'Content-Range',
     'Content-Type': 'application/json',
