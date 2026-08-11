@@ -1,10 +1,11 @@
-import { Anchor, Gauge, LogOut, Scissors, Settings, UserRoundPlus, Users } from 'lucide-react';
+import { Anchor, ClipboardCheck, Gauge, LogOut, Scissors, Settings, UserRoundPlus, Users } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 
 const navigation = [
   { to: '/', label: 'Resumen', icon: Gauge, end: true },
   { to: '/clientes', label: 'Clientes', icon: Users },
+  { to: '/recepcion', label: 'Recepción', icon: ClipboardCheck },
   { to: '/cortes', label: 'Cortes', icon: Scissors },
   { to: '/configuracion', label: 'Configuración', icon: Settings },
 ];
@@ -12,6 +13,7 @@ const navigation = [
 const pageNames: Record<string, string> = {
   '/': 'Resumen',
   '/clientes': 'Clientes',
+  '/recepcion': 'Pendientes por cobrar',
   '/cortes': 'Cortes',
   '/configuracion': 'Configuración',
 };

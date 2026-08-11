@@ -107,3 +107,41 @@ export interface RegisterCutResult {
   transaction_created: boolean;
   welcome_queued: boolean;
 }
+
+/** Fila de la vista walkins_pendientes: la bandeja de recepcion. */
+export interface PendingWalkin {
+  appointment_id: string;
+  starts_at: string;
+  ends_at: string;
+  barbero: string;
+  servicio: string;
+  precio_sugerido: number | null;
+  client_id: string | null;
+  cliente: string | null;
+  telefono: string | null;
+  source: RecordSource;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface CompleteAppointmentInput {
+  appointmentId: string;
+  /** Solo hace falta cuando la cita todavia no tiene cliente enlazado. */
+  client?: ClientInput;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  occurredAt?: string;
+  notes?: string;
+}
+
+export interface CompleteAppointmentResult {
+  ok: boolean;
+  appointment_id: string;
+  client_id: string;
+  client_created: boolean;
+  welcome_queued: boolean;
+  transaction_id: string;
+  transaction_created: boolean;
+  amount: number;
+  payment_method: PaymentMethod;
+}

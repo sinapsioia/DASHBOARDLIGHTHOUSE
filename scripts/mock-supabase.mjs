@@ -20,6 +20,11 @@ const clients = [
   { id: '42222222-2222-4222-8222-222222222222', full_name: 'Mateo Gomez', phone_e164: '+573204445566', email: null, document_id: null, birth_date: null, address: null, whatsapp_opt_in: false, whatsapp_opt_in_at: null, welcome_status: 'not_requested', welcome_sent_at: null, source: 'manual', notes: 'Prefiere tijera.', created_at: now.toISOString(), updated_at: now.toISOString() },
 ];
 
+const walkinsPendientes = [
+  { appointment_id: '61111111-1111-4111-8111-111111111111', starts_at: new Date(Date.now() - 3600000).toISOString(), ends_at: new Date(Date.now() - 900000).toISOString(), barbero: 'Camilo', servicio: 'Corte Faro de Alejandria', precio_sugerido: 50000, client_id: null, cliente: null, telefono: null, source: 'walk_in_bot', notes: 'Walk-in. Cliente indicado por el barbero: Jhonatan Gomez', created_at: now.toISOString() },
+  { appointment_id: '62222222-2222-4222-8222-222222222222', starts_at: new Date(Date.now() - 7200000).toISOString(), ends_at: new Date(Date.now() - 5400000).toISOString(), barbero: 'Jeisson', servicio: 'Combo Faro Trinidad', precio_sugerido: 60000, client_id: clients[0].id, cliente: clients[0].full_name, telefono: clients[0].phone_e164, source: 'bot_booking', notes: null, created_at: now.toISOString() },
+];
+
 const transactions = [
   { id: '51111111-1111-4111-8111-111111111111', client_id: clients[0].id, barber_id: barbers[0].id, service_id: services[0].id, amount: 45000, payment_method: 'cash', occurred_at: now.toISOString(), status: 'active', source: 'walk_in_bot', notes: null, barber_name_snapshot: 'Daniel', service_name_snapshot: 'Corte Faro', service_category_snapshot: 'Corte', created_at: now.toISOString(), client: { id: clients[0].id, full_name: clients[0].full_name, phone_e164: clients[0].phone_e164 }, barber: { id: barbers[0].id, name: barbers[0].name, color: barbers[0].color }, service: { id: services[0].id, name: services[0].name, category: services[0].category } },
 ];
@@ -45,6 +50,7 @@ function restResult(pathname, url) {
   if (pathname.endsWith('/barbers')) return url.searchParams.get('active') === 'eq.true' ? barbers.filter((item) => item.active) : barbers;
   if (pathname.endsWith('/services')) return url.searchParams.get('active') === 'eq.true' ? services.filter((item) => item.active) : services;
   if (pathname.endsWith('/clients')) return clients;
+  if (pathname.endsWith('/walkins_pendientes')) return walkinsPendientes;
   if (pathname.endsWith('/service_transactions')) {
     const clientFilter = url.searchParams.get('client_id');
     return clientFilter ? transactions.filter((item) => `eq.${item.client_id}` === clientFilter) : transactions;
@@ -60,6 +66,9 @@ createServer((request, response) => {
   if (url.pathname === '/auth/v1/logout') return send(response, 204, undefined, request);
   if (url.pathname === '/rest/v1/rpc/register_service_transaction') {
     return send(response, 200, { client_id: clients[0].id, client_created: false, transaction_id: transactions[0].id, transaction_created: true, welcome_queued: false }, request);
+  }
+  if (url.pathname === '/rest/v1/rpc/complete_appointment') {
+    return send(response, 200, { ok: true, appointment_id: '61111111-1111-4111-8111-111111111111', client_id: clients[0].id, client_created: true, welcome_queued: false, transaction_id: transactions[0].id, transaction_created: true, amount: 50000, payment_method: 'cash' }, request);
   }
   if (url.pathname === '/rest/v1/rpc/get_integration_catalog') {
     return send(response, 200, { barbers: barbers.filter((item) => item.active), services: services.filter((item) => item.active) }, request);

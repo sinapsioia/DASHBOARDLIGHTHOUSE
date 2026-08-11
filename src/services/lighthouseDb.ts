@@ -4,6 +4,9 @@ import type {
   Barber,
   Client,
   ClientInput,
+  CompleteAppointmentInput,
+  CompleteAppointmentResult,
+  PendingWalkin,
   RegisterCutInput,
   RegisterCutResult,
   Service,
@@ -185,4 +188,46 @@ export async function registerCut(input: RegisterCutInput): Promise<RegisterCutR
   });
   if (error) throw new Error(messageForError(error, 'No fue posible registrar el corte.'));
   return data as RegisterCutResult;
+}
+
+/**
+ * Bandeja de recepcion: citas confirmadas que todavia no tienen cobro.
+ * Incluye los walk-ins que el barbero registro sin identificar al cliente.
+ */
+export async function listPendingWalkins(): Promise<PendingWalkin[]> {
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from('walkins_pendientes')
+    .select('*')
+    .order('starts_at', { ascending: false })
+    .limit(200);
+  if (error) throw new Error(messageForError(error, 'No fue posible cargar los pendientes por cobrar.'));
+  return (data || []) as PendingWalkin[];
+}
+
+/** Cierre de recepcion: identifica al cliente, completa la cita y cobra. */
+export async function completeAppointment(input: CompleteAppointmentInput): Promise<CompleteAppointmentResult> {
+  const client = requireSupabase();
+  const { data, error } = await client.rpc('complete_appointment', {
+    payload: {
+      appointment_id: input.appointmentId,
+      client: input.client
+        ? {
+            full_name: input.client.full_name,
+            phone: normalizePhone(input.client.phone_e164),
+            email: input.client.email || null,
+            document_id: input.client.document_id || null,
+            birth_date: input.client.birth_date || null,
+            address: input.client.address || null,
+          }
+        : undefined,
+      whatsapp_opt_in: input.client?.whatsapp_opt_in ?? false,
+      amount: input.amount,
+      payment_method: input.paymentMethod,
+      occurred_at: input.occurredAt ? bogotaLocalDateTimeToIso(input.occurredAt) : undefined,
+      notes: input.notes?.trim() || null,
+    },
+  });
+  if (error) throw new Error(messageForError(error, 'No fue posible cerrar la cita.'));
+  return data as CompleteAppointmentResult;
 }
